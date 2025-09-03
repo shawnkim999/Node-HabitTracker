@@ -6,8 +6,10 @@ import {
     updateHabit,
     deleteHabit
 } from '../controllers/habitController'
+import { authenticate } from "../middleware/authMiddleware";
 
 const router = Router();
+router.use(authenticate);
 
 router.get("/", getAllHabits);
 router.get("/:id", getHabitById);

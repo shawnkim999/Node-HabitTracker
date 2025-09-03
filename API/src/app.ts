@@ -5,14 +5,19 @@ import cors from 'cors';
 dotenv.config();
 
 // import router
-import habitRouter from './routes/habitRoutes';
+//import habitRoutes from './routes/habitRoutes';
+import userRoutes from './routes/userRoutes';
+import habitRoutes from './routes/habitRoutes';
+import authRoutes from './routes/authRoutes';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 // app.use("route", router);
-app.use("/habits", habitRouter);
+app.use("/users", userRoutes);
+app.use("/auth", authRoutes);
+app.use("/habits", habitRoutes);
 
 const PORT = 5000;
 

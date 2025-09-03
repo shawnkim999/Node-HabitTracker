@@ -1,10 +1,17 @@
 import { Request, Response } from "express";
-import { Habit } from "../models/Habit";
 import prisma from "../lib/prisma";
 
 export const getAllHabits = async (req:Request, res:Response):Promise<void> => {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     try {
-        const habits = await prisma.habit.findMany();
+        const habits = await prisma.habit.findMany({
+            where: { userId }
+        });
 
         res.json(habits)
     } catch (error) {
@@ -15,9 +22,18 @@ export const getAllHabits = async (req:Request, res:Response):Promise<void> => {
 
 export const getHabitById = async (req:Request, res:Response):Promise<void> => {
     const habitId = req.params.id;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        res.status(401).json({ error: "Unauthorized" })
+        return;
+    }
     try {
         const habit = await prisma.habit.findFirst({
-            where: {id: habitId},
+            where: {
+                id: habitId,
+                userId
+            },
             select: {
                 id: true,
                 title: true,
@@ -41,13 +57,22 @@ export const getHabitById = async (req:Request, res:Response):Promise<void> => {
 
 export const createHabit = async (req:Request, res:Response):Promise<void> => {
     const { title, description, status } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     try {
         const createdHabit = await prisma.habit.create({
             data: {
                 title,
                 description,
-                status
-            }
+                status,
+                user: {
+                    connect: { id: userId }
+                }
+            },
         });
         res.status(201).json(createdHabit);
     } catch (error) {
@@ -58,9 +83,27 @@ export const createHabit = async (req:Request, res:Response):Promise<void> => {
 
 export const updateHabit = async (req:Request, res:Response):Promise<void> => {
     const habitId = req.params.id;
+    const userId = req.user?.userId;
     const { title, description, status } = req.body;
+
+    if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     try {
-        const updatedUser = await prisma.habit.update({
+        const habit = await prisma.habit.findFirst({
+            where: { 
+                id: habitId,
+                userId
+            }
+        });
+
+        if (!habit) {
+            res.status(404).json({ error: "Habit not found or unauthorized" });
+            return;
+        };
+
+        const updatedHabit = await prisma.habit.update({
             where: { id: habitId },
             data: {
                 title,
@@ -74,9 +117,9 @@ export const updateHabit = async (req:Request, res:Response):Promise<void> => {
                 status: true,
                 createdAt: true
             }
-        })
+        });
 
-        res.json(updatedUser);
+        res.json(updatedHabit);
     } catch (error) {
         console.error("Failed to update habit: ", error);
         res.status(500).json({ error: "Failed to update habit" });
@@ -85,7 +128,25 @@ export const updateHabit = async (req:Request, res:Response):Promise<void> => {
 
 export const deleteHabit = async (req:Request, res:Response):Promise<void> => {
     const habitId = req.params.id;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     try {
+        const habit = await prisma.habit.findFirst({
+            where: { 
+                id: habitId,
+                userId
+            }
+        });
+
+        if (!habit) {
+            res.status(404).json({ error: "Habit not found or unauthorized" });
+            return;
+        };
+
         await prisma.habit.delete({ where: { id: habitId } });
 
         res.status(204).send();
